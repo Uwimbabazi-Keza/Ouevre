@@ -14,7 +14,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     // Add any initialization tasks here, e.g., data loading, etc.
     // After a delay, navigate to the login page
-    Future.delayed(Duration(seconds: 10), () {
+    Future.delayed(Duration(seconds: 5), () {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => LoginPage(),
@@ -49,8 +49,9 @@ class _SplashScreenState extends State<SplashScreen> {
                 SizedBox(height: 16),
                 Text(
                   'OUEVRE',
-                  style: GoogleFonts.openSans(
+                  style: GoogleFonts.overlock(
                     textStyle: TextStyle(
+                      letterSpacing: 3.5,
                       color: Colors.white,
                       fontSize: 50,
                       fontWeight: FontWeight.bold,
