@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:ouevre/colors.dart'; // Import your color reference
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ouevre/screens/home_screen.dart'; // Import HomeScreen
 
 class LoginPage extends StatelessWidget {
+  void _signIn(BuildContext context) {
+    // Simulate a successful sign-in, you can replace this with your authentication logic.
+    bool isSignedIn = true;
+
+    if (isSignedIn) {
+      // Navigate to the HomeScreen
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => HomeScreen()));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,7 +90,7 @@ class LoginPage extends StatelessWidget {
                 SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () {
-                    // Implement sign-in logic here
+                    _signIn(context); // Use the _signIn method for navigation
                   },
                   style: ElevatedButton.styleFrom(
                     primary: AppColors.primaryColor, // Use primary color
