@@ -1,157 +1,181 @@
 import 'package:flutter/material.dart';
-import 'package:ouevre/colors.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 
 class EditScreen extends StatefulWidget {
+  final String imagePath;
+  final String title;
+  final String date;
+  final String medium;
+  final String description;
+  final bool isNewEntry;
+
+  EditScreen({
+    required this.imagePath,
+    required this.title,
+    required this.date,
+    required this.medium,
+    required this.description,
+    this.isNewEntry = false,
+  });
+
   @override
   _EditScreenState createState() => _EditScreenState();
 }
 
 class _EditScreenState extends State<EditScreen> {
-  final TextEditingController titleController = TextEditingController();
-  final TextEditingController dateController = TextEditingController();
-  final TextEditingController mediumController = TextEditingController();
-  final TextEditingController descriptionController = TextEditingController();
-  File? selectedImage;
+  final titleController = TextEditingController();
+  final dateController = TextEditingController();
+  final mediumController = TextEditingController();
+  final descriptionController = TextEditingController();
+  File? _image;
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+  @override
+  void initState() {
+    super.initState();
+    titleController.text = widget.title;
+    dateController.text = widget.date;
+    mediumController.text = widget.medium;
+    descriptionController.text = widget.description;
 
+    if (widget.isNewEntry) {
+      getImage();
+    }
+  }
+
+  Future getImage() async {
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
+      File file = File(pickedFile.path);
       setState(() {
-        selectedImage = File(pickedFile.path);
+        _image = file;
       });
     }
   }
 
-  Future<void> _saveEntry() async {
-    final prefs = await SharedPreferences.getInstance();
-    final imageKey = 'entry_image_path';
-    final title = titleController.text;
-    final date = dateController.text;
-    final medium = mediumController.text;
-    final description = descriptionController.text;
+  Future<String> compressAndSaveImage(File imageFile) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final filePath =
+        directory.path + "/${DateTime.now().millisecondsSinceEpoch}.jpg";
+    var result = await FlutterImageCompress.compressAndGetFile(
+      imageFile.path,
+      filePath,
+      quality: 85,
+    );
+    return result!.path;
+  }
 
-    if (selectedImage != null) {
-      await prefs.setString(imageKey, selectedImage!.path);
+  Future<void> saveEntry() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    String finalImagePath = _image?.path ?? widget.imagePath;
+
+    // If it's a new entry or a new image is selected, compress, save and store the new image path
+    if (widget.isNewEntry || _image != null) {
+      finalImagePath = await compressAndSaveImage(_image!);
+      List<String> savedImages = prefs.getStringList("savedImages") ?? [];
+      savedImages.add(finalImagePath);
+      await prefs.setStringList("savedImages", savedImages);
     }
 
-    // Save other entry details to SharedPreferences
-    // ...
+    // Save the edited details
+    await prefs.setString("$finalImagePath-title", titleController.text);
+    await prefs.setString("$finalImagePath-date", dateController.text);
+    await prefs.setString("$finalImagePath-medium", mediumController.text);
+    await prefs.setString(
+        "$finalImagePath-description", descriptionController.text);
 
-    Navigator.pop(context); // Return to the home screen
+    Navigator.pop(context, {
+      'title': titleController.text,
+      'date': dateController.text,
+      'medium': mediumController.text,
+      'description': descriptionController.text,
+      'imagePath': finalImagePath,
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Add an entry"),
-      ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            SizedBox(height: 20),
-            Center(
-              child: GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  width: 150,
-                  height: 150,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(75),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
                   ),
-                  child: selectedImage != null
-                      ? Image.file(selectedImage!, fit: BoxFit.cover)
+                  Text(
+                    widget.isNewEntry ? "New Entry" : "Edit Entry",
+                    style: TextStyle(
+                      fontSize: 24,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(width: 50) // For alignment purposes
+                ],
+              ),
+              SizedBox(height: 40),
+              Center(
+                child: IconButton(
+                  iconSize: 70.0,
+                  color: Colors.purple,
+                  icon: widget.isNewEntry
+                      ? Icon(Icons.add)
                       : Icon(
-                          Icons.cloud_upload,
-                          color: AppColors.primaryColor,
-                          size: 48.0,
-                        ),
+                          Icons.upload_file), // Change icon if it's a new entry
+                  onPressed: getImage,
                 ),
               ),
-            ),
-            SizedBox(height: 10),
-            Center(
-              child: Text(
-                "Tap to upload",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 14.0,
-                ),
-              ),
-            ),
-            SizedBox(height: 20),
-            Text(
-              "Title",
-              style: TextStyle(
-                fontSize: 18.0,
-              ),
-            ),
-            TextField(
-              controller: titleController,
-              decoration: InputDecoration(
-                hintText: "Enter title",
-              ),
-            ),
-            SizedBox(height: 20),
-            Text(
-              "Date",
-              style: TextStyle(
-                fontSize: 18.0,
-              ),
-            ),
-            TextField(
-              controller: dateController,
-              decoration: InputDecoration(
-                hintText: "Enter date",
-              ),
-            ),
-            SizedBox(height: 20),
-            Text(
-              "Medium",
-              style: TextStyle(
-                fontSize: 18.0,
-              ),
-            ),
-            TextField(
-              controller: mediumController,
-              decoration: InputDecoration(
-                hintText: "Enter medium",
-              ),
-            ),
-            SizedBox(height: 20),
-            Text(
-              "Description",
-              style: TextStyle(
-                fontSize: 18.0,
-              ),
-            ),
-            TextField(
-              controller: descriptionController,
-              decoration: InputDecoration(
-                hintText: "Enter description",
-              ),
-            ),
-            SizedBox(height: 20),
-            Center(
-              child: ElevatedButton(
-                onPressed: _saveEntry,
+              SizedBox(height: 20),
+              TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(labelText: 'Title')),
+              SizedBox(height: 20),
+              TextField(
+                  controller: dateController,
+                  decoration: InputDecoration(labelText: 'Date')),
+              SizedBox(height: 20),
+              TextField(
+                  controller: mediumController,
+                  decoration: InputDecoration(labelText: 'Medium')),
+              SizedBox(height: 20),
+              TextField(
+                  controller: descriptionController,
+                  decoration: InputDecoration(labelText: 'Description')),
+              SizedBox(height: 30),
+              ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  primary: AppColors.primaryColor,
+                  primary: Colors.purple,
                 ),
-                child: Text("Add Entry", style: TextStyle(color: Colors.white)),
+                child: Text('Save Changes'),
+                onPressed: saveEntry,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    dateController.dispose();
+    mediumController.dispose();
+    descriptionController.dispose();
+    super.dispose();
   }
 }

@@ -1,11 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:ouevre/colors.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-
-import 'package:ouevre/screens/edit_screen.dart'; // Import the EditScreen
+import 'package:flutter/material.dart';
+import 'package:ouevre/screens/edit_screen.dart';
+import 'package:ouevre/screens/image_description.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ouevre/screens/login_page.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -13,88 +11,208 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<String> imageUrls = [];
+  List<String> savedImages = [];
+  List<String> filteredImages = [];
+  String searchQuery = "";
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+  @override
+  void initState() {
+    super.initState();
+    fetchImages();
+  }
 
-    if (pickedFile != null) {
-      setState(() {
-        imageUrls.add(pickedFile.path);
-      });
-    }
+  Future<void> fetchImages() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> images = prefs.getStringList("savedImages") ?? [];
+    setState(() {
+      savedImages = images;
+      filteredImages = images; // Initially display all images
+    });
+  }
+
+  void filterImages() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    List<String> filtered = savedImages.where((imagePath) {
+      String title = prefs.getString("${imagePath}-title") ?? "";
+      String date = prefs.getString("${imagePath}-date") ?? "";
+      String medium = prefs.getString("${imagePath}-medium") ?? "";
+
+      return title.contains(searchQuery) ||
+          date.contains(searchQuery) ||
+          medium.contains(searchQuery);
+    }).toList();
+
+    setState(() {
+      filteredImages = filtered;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: <Widget>[
-          Container(
-            alignment: Alignment.center,
-            padding: EdgeInsets.all(70.0),
-            child: Text(
-              "My Journal",
-              style: GoogleFonts.overlock(
-                textStyle: TextStyle(
-                  fontSize: 40.0,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(80.0),
+              child: Text(
+                'My Art Journal',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 33,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primaryColor,
                 ),
               ),
             ),
-          ),
-          SizedBox(height: 10),
-          Center(
-            child: ElevatedButton(
-              onPressed: () {
-                // Navigate to the EditScreen when the upload button is tapped
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => EditScreen()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                primary: AppColors.primaryColor,
-              ),
-              child:
-                  Text("Upload Image", style: TextStyle(color: Colors.white)),
-            ),
-          ),
-          SizedBox(height: 20),
-          Expanded(
-            child: StaggeredGridView.countBuilder(
-              crossAxisCount: 4,
-              itemCount: imageUrls.length,
-              itemBuilder: (BuildContext context, int index) {
-                return Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8.0),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.5),
-                        spreadRadius: 2,
-                        blurRadius: 7,
-                        offset: Offset(0, 3),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(5.0),
+                child: filteredImages.isNotEmpty
+                    ? GridView.builder(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 5.0,
+                          mainAxisSpacing: 10.0,
+                        ),
+                        itemCount: filteredImages.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          return GestureDetector(
+                            onTap: () async {
+                              SharedPreferences prefs =
+                                  await SharedPreferences.getInstance();
+                              String title = prefs.getString(
+                                      "${filteredImages[index]}-title") ??
+                                  "";
+                              String date = prefs.getString(
+                                      "${filteredImages[index]}-date") ??
+                                  "";
+                              String medium = prefs.getString(
+                                      "${filteredImages[index]}-medium") ??
+                                  "";
+                              String description = prefs.getString(
+                                      "${filteredImages[index]}-description") ??
+                                  "";
+
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => ImageDescriptionScreen(
+                                    imagePath: filteredImages[index],
+                                    title: title,
+                                    date: date,
+                                    medium: medium,
+                                    description: description,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(7.0),
+                              child: AspectRatio(
+                                aspectRatio: 2 / 3,
+                                child: Image.file(
+                                  File(filteredImages[index]),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    : Center(
+                        child: Text(
+                          'No images matched your search.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 16,
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8.0),
-                    child: Image.file(
-                      File(imageUrls[index]),
-                      fit: BoxFit.cover,
-                    ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color.fromARGB(255, 228, 74, 255),
+        child: Icon(Icons.add),
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EditScreen(
+                imagePath: "",
+                title: "",
+                date: "",
+                medium: "",
+                description: "",
+              ),
+            ),
+          );
+          fetchImages();
+        },
+      ),
+      bottomNavigationBar: BottomAppBar(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            IconButton(
+              icon: Icon(Icons.search, color: Colors.grey),
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (context) {
+                    return Container(
+                      color: Colors.black.withOpacity(0.2),
+                      padding: EdgeInsets.all(20),
+                      child: TextField(
+                        onChanged: (value) {
+                          setState(() {
+                            searchQuery = value;
+                          });
+                          filterImages();
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search titles, tags, dates, media...',
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.search, color: Colors.purple),
+                            onPressed: () {
+                              filterImages();
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+            IconButton(
+              icon: Icon(Icons.home, color: Colors.purple),
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HomeScreen(),
                   ),
                 );
               },
-              staggeredTileBuilder: (int index) => StaggeredTile.fit(2),
-              mainAxisSpacing: 4.0,
-              crossAxisSpacing: 4.0,
             ),
-          ),
-        ],
+            IconButton(
+              icon: Icon(Icons.logout, color: Colors.grey),
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LoginPage(),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        color: Colors.white,
       ),
     );
   }
