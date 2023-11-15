@@ -4,6 +4,7 @@ import 'package:ouevre/screens/edit_screen.dart';
 import 'package:ouevre/screens/image_description.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ouevre/screens/login_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -23,10 +24,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchImages() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
+    //fetch images from user's device
     List<String> images = prefs.getStringList("savedImages") ?? [];
     setState(() {
       savedImages = images;
       filteredImages = images; // Initially display all images
+    });
+
+    // Fetch images from Firebase
+    FirebaseFirestore.instance
+        .collection('journal_entries')
+        .get()
+        .then((querySnapshot) {
+      List<String> firebaseImages = [];
+      querySnapshot.docs.forEach((doc) {
+        firebaseImages.add(doc['imagePath']);
+      });
+
+      setState(() {
+        savedImages.addAll(firebaseImages);
+        filteredImages = savedImages; // Initially display all images
+      });
     });
   }
 

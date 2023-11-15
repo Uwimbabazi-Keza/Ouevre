@@ -4,6 +4,7 @@ import 'package:ouevre/screens/edit_screen.dart';
 import 'package:ouevre/screens/home_screen.dart';
 import 'package:ouevre/screens/login_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ImageDescriptionScreen extends StatefulWidget {
   final String imagePath;
@@ -70,6 +71,32 @@ class _ImageDescriptionScreenState extends State<ImageDescriptionScreen> {
     setState(() {
       filteredImages = filtered;
     });
+  }
+
+  Future<void> deleteEntry() async {
+    try {
+      // Delete locally
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.remove("${imagePath}-title");
+      prefs.remove("${imagePath}-date");
+      prefs.remove("${imagePath}-medium");
+      prefs.remove("${imagePath}-description");
+      savedImages.remove(imagePath);
+      prefs.setStringList("savedImages", savedImages);
+
+      // Delete from Firebase
+      await FirebaseFirestore.instance
+          .collection('entries')
+          .doc(imagePath)
+          .delete();
+
+      // Navigate back to home screen
+      Navigator.pop(context);
+      Navigator.pop(context); // Pop twice to go back to home screen
+    } catch (e) {
+      print("Error deleting entry: $e");
+      // Handle error, e.g., show an error message to the user
+    }
   }
 
   @override
@@ -244,6 +271,35 @@ class _ImageDescriptionScreenState extends State<ImageDescriptionScreen> {
           ],
         ),
         color: Colors.white,
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text("Delete Entry"),
+                content: Text("Are you sure you want to delete this entry?"),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text("Cancel"),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      await deleteEntry();
+                    },
+                    child: Text("Delete"),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+        child: Icon(Icons.delete),
+        backgroundColor: Colors.red,
       ),
     );
   }

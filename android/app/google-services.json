@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "811689488448",
+    "project_id": "ouevre-d5d50",
+    "storage_bucket": "ouevre-d5d50.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:811689488448:android:4f4b1f7e62dfeada21afa5",
+        "android_client_info": {
+          "package_name": "com.example.ouevre"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcUUW8UTweVgVYfSbzu8boJKTJMynWpVs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

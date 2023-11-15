@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 
 class EditScreen extends StatefulWidget {
@@ -82,12 +83,21 @@ class _EditScreenState extends State<EditScreen> {
       await prefs.setStringList("savedImages", savedImages);
     }
 
-    // Save the edited details
+    // Save the edited details locally
     await prefs.setString("$finalImagePath-title", titleController.text);
     await prefs.setString("$finalImagePath-date", dateController.text);
     await prefs.setString("$finalImagePath-medium", mediumController.text);
     await prefs.setString(
         "$finalImagePath-description", descriptionController.text);
+
+    // Save the entry to Firebase
+    FirebaseFirestore.instance.collection('journal_entries').add({
+      'title': titleController.text,
+      'date': dateController.text,
+      'medium': mediumController.text,
+      'description': descriptionController.text,
+      'imagePath': finalImagePath,
+    });
 
     Navigator.pop(context, {
       'title': titleController.text,
