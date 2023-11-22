@@ -13,15 +13,26 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn googleSignIn = GoogleSignIn();
-  String email = ''; // Initialize email variable
-  String password = ''; // Initialize password variable
-  String errorMessage = ''; // Added variable to hold error message
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: <String>[
+      'email',
+      'https://www.googleapis.com/auth/contacts.readonly',
+    ],
+    clientId: '291053451217-bj7npkpbrj4j3930kfsgsbed06rb56l7.apps.googleusercontent.com',
+  );
+
+  String email = '';
+  String password = '';
+  String errorMessage = '';
 
   Future<User?> _signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleSignInAccount =
-          await googleSignIn.signIn();
+      // Ensure that Google Sign-In is only initialized once
+      if (_googleSignIn.currentUser == null) {
+        await _googleSignIn.signIn();
+      }
+
+      final GoogleSignInAccount? googleSignInAccount = _googleSignIn.currentUser;
       if (googleSignInAccount != null) {
         final GoogleSignInAuthentication googleSignInAuthentication =
             await googleSignInAccount.authentication;
@@ -45,8 +56,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _signIn(BuildContext context) async {
     try {
-      UserCredential userCredential =
-          await _auth.signInWithEmailAndPassword(
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -65,8 +75,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _signUp(BuildContext context) async {
     try {
-      UserCredential userCredential =
-          await _auth.createUserWithEmailAndPassword(
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
