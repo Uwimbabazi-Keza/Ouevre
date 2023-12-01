@@ -18,7 +18,7 @@ class _LoginPageState extends State<LoginPage> {
       'email',
       'https://www.googleapis.com/auth/contacts.readonly',
     ],
-    clientId: '291053451217-bj7npkpbrj4j3930kfsgsbed06rb56l7.apps.googleusercontent.com',
+    serverClientId: '291053451217-bj7npkpbrj4j3930kfsgsbed06rb56l7.apps.googleusercontent.com',
   );
 
   String email = '';
