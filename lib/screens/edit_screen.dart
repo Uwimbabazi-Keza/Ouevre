@@ -141,7 +141,7 @@ class _EditScreenState extends State<EditScreen> {
               Center(
                 child: IconButton(
                   iconSize: 70.0,
-                  color: Colors.red,
+                  color: Colors.purple,
                   icon: widget.isNewEntry
                       ? Icon(Icons.add)
                       : Icon(
